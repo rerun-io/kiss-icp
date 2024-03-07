@@ -24,18 +24,22 @@
 #include "KissICP.hpp"
 
 #include <Eigen/Core>
+#include <rerun.hpp>
 #include <tuple>
 #include <vector>
-
+#include "kiss_icp/core/Recording.hpp"
 #include "kiss_icp/core/Deskew.hpp"
+#include "kiss_icp/core/Recording.hpp"
 #include "kiss_icp/core/Preprocessing.hpp"
 #include "kiss_icp/core/Registration.hpp"
 #include "kiss_icp/core/VoxelHashMap.hpp"
+#include <iostream>
 
 namespace kiss_icp::pipeline {
 
 KissICP::Vector3dVectorTuple KissICP::RegisterFrame(const std::vector<Eigen::Vector3d> &frame,
                                                     const std::vector<double> &timestamps) {
+    
     const auto &deskew_frame = [&]() -> std::vector<Eigen::Vector3d> {
         if (!config_.deskew) return frame;
         // TODO(Nacho) Add some asserts here to sanitize the timestamps

@@ -21,6 +21,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 #include "Registration.hpp"
+#include "Recording.hpp"
+#include <rerun.hpp>
 
 #include <tbb/blocked_range.h>
 #include <tbb/parallel_reduce.h>
@@ -147,6 +149,7 @@ Sophus::SE3d Registration::AlignPointsToMap(const std::vector<Eigen::Vector3d> &
                                             const Sophus::SE3d &initial_guess,
                                             double max_correspondence_distance,
                                             double kernel) {
+
     if (voxel_map.Empty()) return initial_guess;
 
     // Equation (9)
@@ -155,9 +158,34 @@ Sophus::SE3d Registration::AlignPointsToMap(const std::vector<Eigen::Vector3d> &
 
     // ICP-loop
     Sophus::SE3d T_icp = Sophus::SE3d();
-    for (int j = 0; j < max_num_iterations_; ++j) {
+    int j {0};
+    for (; j < max_num_iterations_; ++j) {
         // Equation (10)
         const auto associations = FindAssociations(source, voxel_map, max_correspondence_distance);
+
+        if (rr_rec != nullptr) {
+            std::vector<rerun::Position3D> rr_source;
+            for (auto &point : source) {
+                float x = float(point(0));
+                float y = float(point(1));
+                float z = float(point(2));
+                rr_source.push_back(rerun::Position3D(x, y, z));
+            }
+            rr_rec->log("world/icp/source", rerun::Points3D(rr_source));
+            std::vector<rerun::LineStrip3D> strips;
+            for (size_t i = 0; i < associations.size(); ++i) {
+                auto [src_point, target_point] = associations[i];
+                // auto target_point = tgt[i];
+                std::vector<rerun::Position3D> lines {};
+                lines.push_back(rerun::Position3D(float(src_point(0)),float(src_point(1)),float(src_point(2))));
+                lines.push_back(rerun::Position3D(float(target_point(0)),float(target_point(1)),float(target_point(2))));
+                strips.push_back(
+                    rerun::LineStrip3D(lines)
+                );
+            }
+            rr_rec->log("world/icp/corcorrespondence", rerun::LineStrips3D(strips));
+        }
+
         // Equation (11)
         const auto &[JTJ, JTr] = BuildLinearSystem(associations, kernel);
         const Eigen::Vector6d dx = JTJ.ldlt().solve(-JTr);
@@ -168,6 +196,9 @@ Sophus::SE3d Registration::AlignPointsToMap(const std::vector<Eigen::Vector3d> &
         T_icp = estimation * T_icp;
         // Termination criteria
         if (dx.norm() < convergence_criterion_) break;
+    }
+    if (rr_rec != nullptr) {
+        rr_rec->log("cpp_log/", rerun::TextLog(std::to_string(j).c_str()));
     }
     // Spit the final transformation
     return T_icp * initial_guess;

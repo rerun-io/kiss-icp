@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import numpy as np
+import rerun as rr
 from pyquaternion import Quaternion
 
 from kiss_icp.config import load_config, write_config
@@ -98,8 +99,17 @@ class OdometryPipeline:
             start_time = time.perf_counter_ns()
             source, keypoints = self.odometry.register_frame(raw_frame, timestamps)
             self.times.append(time.perf_counter_ns() - start_time)
-            self.visualizer.update(source, keypoints, self.odometry.local_map, self.poses[-1])
+            
+            if self.has_gt:
+                rr.log("world/ground_truth", rr.Points3D(self.gt_poses[:len(self.poses),:3,3]-self.gt_poses[0,:3,3]))
+            
+            rr.log("adaptive_threshold", rr.Scalar(self.odometry.get_adaptive_threshold()))
 
+            rr.log("world/est_positions", rr.Points3D([self.poses[i][:3,3] for i in range(len(self.poses))]))
+            # rr.log("world/pose_vehicle", rr.Transform3D(translation=self.poses[-1][:3,3], mat3x3=self.poses[-1][:3,:3]))
+            rr.log("world/map/", rr.Points3D(self.odometry.local_map.point_cloud(), radii=0.01))
+
+            
     def _next(self, idx):
         """TODO: re-arrange this logic"""
         dataframe = self._dataset[idx]

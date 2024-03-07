@@ -33,6 +33,7 @@
 #include "kiss_icp/core/Deskew.hpp"
 #include "kiss_icp/core/Preprocessing.hpp"
 #include "kiss_icp/core/Registration.hpp"
+#include "kiss_icp/core/Recording.hpp"
 #include "kiss_icp/core/Threshold.hpp"
 #include "kiss_icp/core/VoxelHashMap.hpp"
 #include "kiss_icp/metrics/Metrics.hpp"
@@ -124,6 +125,9 @@ PYBIND11_MODULE(kiss_icp_pybind, m) {
     m.def("_kitti_seq_error", &metrics::SeqError, "gt_poses"_a, "results_poses"_a);
     m.def("_absolute_trajectory_error", &metrics::AbsoluteTrajectoryError, "gt_poses"_a,
           "results_poses"_a);
+
+    // Rerun recording.
+    m.def("_init_rr_rec", &init_rr_rec, "app_id"_a, "recording_id"_a);
 }
 
 }  // namespace kiss_icp

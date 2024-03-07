@@ -22,6 +22,7 @@
 #pragma once
 
 #include <Eigen/Core>
+#include <rerun.hpp>
 #include <tuple>
 #include <vector>
 
@@ -63,7 +64,10 @@ public:
           local_map_(config.voxel_size, config.max_range, config.max_points_per_voxel),
           adaptive_threshold_(config.initial_threshold, config.min_motion_th, config.max_range) {}
 
-    KissICP() : KissICP(KISSConfig{}) {}
+    KissICP() : KissICP(KISSConfig{}) {
+        // rec = rerun::RecordingStream("rerun_example_tensor");
+        // rec.spawn().exit_on_failure()
+    }
 
 public:
     Vector3dVectorTuple RegisterFrame(const std::vector<Eigen::Vector3d> &frame);
@@ -86,6 +90,7 @@ private:
     Registration registration_;
     VoxelHashMap local_map_;
     AdaptiveThreshold adaptive_threshold_;
+    
 };
 
 }  // namespace kiss_icp::pipeline

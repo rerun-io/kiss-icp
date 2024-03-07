@@ -21,6 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 #include "VoxelHashMap.hpp"
+#include "Recording.hpp"
+
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_reduce.h>
 
 #include <Eigen/Core>
 #include <algorithm>

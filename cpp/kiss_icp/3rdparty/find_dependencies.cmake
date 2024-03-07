@@ -37,6 +37,7 @@ function(find_external_dependecy PACKAGE_NAME TARGET_NAME INCLUDED_CMAKE_PATH)
   endif()
 endfunction()
 
+find_external_dependecy("Rerun" "rerun_sdk" "${CMAKE_CURRENT_LIST_DIR}/rerun_sdk/rerun_sdk.cmake")
 find_external_dependecy("Eigen3" "Eigen3::Eigen" "${CMAKE_CURRENT_LIST_DIR}/eigen/eigen.cmake")
 find_external_dependecy("Sophus" "Sophus::Sophus" "${CMAKE_CURRENT_LIST_DIR}/sophus/sophus.cmake")
 find_external_dependecy("TBB" "TBB::tbb" "${CMAKE_CURRENT_LIST_DIR}/tbb/tbb.cmake")

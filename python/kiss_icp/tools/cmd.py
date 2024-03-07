@@ -24,6 +24,7 @@ import glob
 import os
 from pathlib import Path
 from typing import Optional
+import rerun as rr
 
 import typer
 
@@ -157,13 +158,14 @@ def kiss_icp_pipeline(
         is_flag=True,
     ),
     # Aditional Options ---------------------------------------------------------------------------
-    visualize: bool = typer.Option(
-        False,
-        "--visualize",
-        "-v",
-        help="[Optional] Open an online visualization of the KISS-ICP pipeline",
-        rich_help_panel="Additional Options",
-    ),
+    # always visualize!
+    # visualize: bool = typer.Option(
+    #     False,
+    #     "--visualize",
+    #     "-v",
+    #     help="[Optional] Open an online visualization of the KISS-ICP pipeline",
+    #     rich_help_panel="Additional Options",
+    # ),
     sequence: Optional[int] = typer.Option(
         None,
         "--sequence",
@@ -229,6 +231,12 @@ def kiss_icp_pipeline(
     # Lazy-loading for faster CLI
     from kiss_icp.datasets import dataset_factory
     from kiss_icp.pipeline import OdometryPipeline
+    from kiss_icp.pybind import kiss_icp_pybind
+
+    rr.init("kiss-icp")
+    rr.spawn(memory_limit="8GB")
+    rr.connect()
+    kiss_icp_pybind._init_rr_rec("kiss-icp", rr.get_recording_id())
 
     OdometryPipeline(
         dataset=dataset_factory(
@@ -242,7 +250,7 @@ def kiss_icp_pipeline(
         config=config,
         deskew=deskew,
         max_range=max_range,
-        visualize=visualize,
+        visualize=False,
         n_scans=n_scans,
         jump=jump,
     ).run().print()

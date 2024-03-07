@@ -43,6 +43,7 @@ dependencies = [
     "pyquaternion",
     "rich",
     "tqdm",
+    "rerun-sdk",
     "typer[all]>=0.6.0",
 ]
 
