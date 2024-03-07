@@ -52,7 +52,9 @@ class OdometryPipeline:
     ):
         self._dataset = dataset
         self._n_scans = (
-            len(self._dataset) - jump if n_scans == -1 else min(len(self._dataset) - jump, n_scans)
+            len(self._dataset) - jump
+            if n_scans == -1
+            else min(len(self._dataset) - jump, n_scans)
         )
         self._jump = jump
         self._first = jump
@@ -68,7 +70,9 @@ class OdometryPipeline:
         self.times = []
         self.poses = self.odometry.poses
         self.has_gt = hasattr(self._dataset, "gt_poses")
-        self.gt_poses = self._dataset.gt_poses[self._first : self._last] if self.has_gt else None
+        self.gt_poses = (
+            self._dataset.gt_poses[self._first : self._last] if self.has_gt else None
+        )
         self.dataset_name = self._dataset.__class__.__name__
         self.dataset_sequence = (
             self._dataset.sequence_id
@@ -97,19 +101,47 @@ class OdometryPipeline:
         for idx in get_progress_bar(self._first, self._last):
             raw_frame, timestamps = self._next(idx)
             start_time = time.perf_counter_ns()
+            
+            translation = self.poses[-1][:3, 3] if len(self.poses) >= 1 else np.array([0, 0, 0])
+            rotation = self.poses[-1][:3, :3] if len(self.poses) >= 1 else np.identity(3)
+            rr.log(
+                "world/pose_vehicle",
+                rr.Transform3D(
+                    translation=translation, mat3x3=rotation
+                ),
+            )
+            rr.log("world/pose_vehicle/raw_frame", rr.Points3D(np.array(raw_frame)))
+            
             source, keypoints = self.odometry.register_frame(raw_frame, timestamps)
             self.times.append(time.perf_counter_ns() - start_time)
-            
+
             if self.has_gt:
-                rr.log("world/ground_truth", rr.Points3D(self.gt_poses[:len(self.poses),:3,3]-self.gt_poses[0,:3,3]))
-            
-            rr.log("adaptive_threshold", rr.Scalar(self.odometry.get_adaptive_threshold()))
+                rr.log(
+                    "world/ground_truth",
+                    rr.Points3D(
+                        self.gt_poses[: len(self.poses), :3, 3]
+                        - self.gt_poses[0, :3, 3]
+                    ),
+                )
 
-            rr.log("world/est_positions", rr.Points3D([self.poses[i][:3,3] for i in range(len(self.poses))]))
-            # rr.log("world/pose_vehicle", rr.Transform3D(translation=self.poses[-1][:3,3], mat3x3=self.poses[-1][:3,:3]))
-            rr.log("world/map/", rr.Points3D(self.odometry.local_map.point_cloud(), radii=0.01))
+            rr.log(
+                "adaptive_threshold", rr.Scalar(self.odometry.get_adaptive_threshold())
+            )
 
-            
+            rr.log(
+                "world/est_positions",
+                rr.Points3D([self.poses[i][:3, 3] for i in range(len(self.poses))]),
+            )
+            # rr.log("world/pose_vehicle/processed_frame", rr.Points3D(source))
+            rr.log(
+                "world/map",
+                rr.Points3D(
+                    self.odometry.local_map.point_cloud(),
+                    radii=0.02,
+                    colors=[255, 0, 0],
+                ),
+            )
+
     def _next(self, idx):
         """TODO: re-arrange this logic"""
         dataframe = self._dataset[idx]
@@ -123,7 +155,9 @@ class OdometryPipeline:
     @staticmethod
     def save_poses_kitti_format(filename: str, poses: List[np.ndarray]):
         def _to_kitti_format(poses: np.ndarray) -> np.ndarray:
-            return np.array([np.concatenate((pose[0], pose[1], pose[2])) for pose in poses])
+            return np.array(
+                [np.concatenate((pose[0], pose[1], pose[2])) for pose in poses]
+            )
 
         np.savetxt(fname=f"{filename}_kitti.txt", X=_to_kitti_format(poses))
 
@@ -135,10 +169,14 @@ class OdometryPipeline:
                 for idx in range(len(poses)):
                     tx, ty, tz = poses[idx][:3, -1].flatten()
                     qw, qx, qy, qz = Quaternion(matrix=poses[idx], atol=0.01).elements
-                    tum_data.append([float(timestamps[idx]), tx, ty, tz, qx, qy, qz, qw])
+                    tum_data.append(
+                        [float(timestamps[idx]), tx, ty, tz, qx, qy, qz, qw]
+                    )
             return np.array(tum_data).astype(np.float64)
 
-        np.savetxt(fname=f"{filename}_tum.txt", X=_to_tum_format(poses, timestamps), fmt="%.4f")
+        np.savetxt(
+            fname=f"{filename}_tum.txt", X=_to_tum_format(poses, timestamps), fmt="%.4f"
+        )
 
     def _calibrate_poses(self, poses):
         return (
@@ -180,10 +218,18 @@ class OdometryPipeline:
         if self.has_gt:
             avg_tra, avg_rot = sequence_error(self.gt_poses, self.poses)
             ate_rot, ate_trans = absolute_trajectory_error(self.gt_poses, self.poses)
-            self.results.append(desc="Average Translation Error", units="%", value=avg_tra)
-            self.results.append(desc="Average Rotational Error", units="deg/m", value=avg_rot)
-            self.results.append(desc="Absolute Trajectory Error (ATE)", units="m", value=ate_trans)
-            self.results.append(desc="Absolute Rotational Error (ARE)", units="rad", value=ate_rot)
+            self.results.append(
+                desc="Average Translation Error", units="%", value=avg_tra
+            )
+            self.results.append(
+                desc="Average Rotational Error", units="deg/m", value=avg_rot
+            )
+            self.results.append(
+                desc="Absolute Trajectory Error (ATE)", units="m", value=ate_trans
+            )
+            self.results.append(
+                desc="Absolute Rotational Error (ARE)", units="rad", value=ate_rot
+            )
 
         # Run timing metrics evaluation, always
         def _get_fps():
@@ -192,8 +238,12 @@ class OdometryPipeline:
 
         avg_fps = int(np.ceil(_get_fps()))
         avg_ms = int(np.ceil(1e3 * (1 / _get_fps())))
-        self.results.append(desc="Average Frequency", units="Hz", value=avg_fps, trunc=True)
-        self.results.append(desc="Average Runtime", units="ms", value=avg_ms, trunc=True)
+        self.results.append(
+            desc="Average Frequency", units="Hz", value=avg_fps, trunc=True
+        )
+        self.results.append(
+            desc="Average Runtime", units="ms", value=avg_ms, trunc=True
+        )
 
     def _write_log(self):
         if not self.results.empty():
@@ -213,7 +263,9 @@ class OdometryPipeline:
         results_dir = os.path.join(os.path.realpath(out_dir), get_current_timestamp())
         latest_dir = os.path.join(os.path.realpath(out_dir), "latest")
         os.makedirs(results_dir, exist_ok=True)
-        os.unlink(latest_dir) if os.path.exists(latest_dir) or os.path.islink(latest_dir) else None
+        os.unlink(latest_dir) if os.path.exists(latest_dir) or os.path.islink(
+            latest_dir
+        ) else None
         os.symlink(results_dir, latest_dir)
         return results_dir
 

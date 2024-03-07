@@ -1,22 +1,20 @@
 let
-  pkgs = import <nixpkgs> {};
+  pkgs = import (
+    builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/23.11.tar.gz"
+  ) {};
 in
   pkgs.mkShell rec {
     packages = with pkgs; [
-      nixpkgs-fmt
-      glxinfo
       python311
+      nix-ld
     ];
     buildInputs = with pkgs; [
       arrow-cpp
       pkg-config
       libxkbcommon
       libGL
-      glib
-      libudev-zero
-      freetype
       gcc-unwrapped
-      pkgs.vulkan-loader
+      vulkan-loader
       xorg.libX11
       xorg.libXcursor
       xorg.libXrender
@@ -25,4 +23,7 @@ in
       xorg.libxcb
     ];
     LD_LIBRARY_PATH= pkgs.lib.makeLibraryPath buildInputs;
+
+    NIX_LD_LIBRARY_PATH = LD_LIBRARY_PATH;
+    NIX_LD = pkgs.lib.fileContents "${pkgs.stdenv.cc}/nix-support/dynamic-linker";
   }

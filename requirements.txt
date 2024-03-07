@@ -6,7 +6,6 @@ click==8.1.7
 cmake==3.28.3
 colorama==0.4.6
 idna==3.6
--e git+https://github.com/rerun-io/kiss-icp@2c149009a93b2ad83486e399ff859d4962dadfb4#egg=kiss_icp&subdirectory=python
 markdown-it-py==3.0.0
 mdurl==0.1.2
 natsort==8.4.0

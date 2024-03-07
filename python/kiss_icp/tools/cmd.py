@@ -102,16 +102,16 @@ docstring = f"""
 \b
 [bold green]Examples: [/bold green]
 # Process all pointclouds in the given <data-dir> \[{", ".join(supported_file_extensions())}]
-$ kiss_icp_pipeline --visualize <data-dir>:open_file_folder:
+$ kiss_icp_pipeline <data-dir>:open_file_folder:
 
 # Process a given [bold]ROS1/ROS2 [/bold]rosbag file (directory:open_file_folder:, ".bag":page_facing_up:, or "metadata.yaml":page_facing_up:)
-$ kiss_icp_pipeline --visualize <path-to-my-rosbag>[:open_file_folder:/:page_facing_up:]
+$ kiss_icp_pipeline <path-to-my-rosbag>[:open_file_folder:/:page_facing_up:]
 
 # Process [bold]mcap [/bold] recording
-$ kiss_icp_pipeline --visualize <path-to-file.mcap>:page_facing_up:
+$ kiss_icp_pipeline <path-to-file.mcap>:page_facing_up:
 
 # Process [bold]Ouster pcap[/bold] recording (requires ouster-sdk Python package installed)
-$ kiss_icp_pipeline --visualize <path-to-ouster.pcap>:page_facing_up: \[--meta <path-to-metadata.json>:page_facing_up:]
+$ kiss_icp_pipeline <path-to-ouster.pcap>:page_facing_up: \[--meta <path-to-metadata.json>:page_facing_up:]
 
 # Use a more specific dataloader: {", ".join(_available_dl_help)}
 $ kiss_icp_pipeline --dataloader kitti --sequence 07 --visualize <path-to-kitti-root>:open_file_folder:
@@ -214,6 +214,18 @@ def kiss_icp_pipeline(
         callback=version_callback,
         is_eager=True,
     ),
+    memory_limit: Optional[str] = typer.Option(
+        "4GB",
+        "--memory-limit",
+        show_default=True,
+        help="[Optional] Specify the memory limit for the rerun viewer."
+    )
+    # vis_preprocess: Optional[bool] = typer.Option(
+    #     True,
+    #     "--vis-preprocess",
+    #     show_default=True,
+    #     # help="[Optional] Specify "
+    # )
 ):
     # Attempt to guess some common file extensions to avoid using the --dataloader flag
     if not dataloader:
@@ -234,8 +246,7 @@ def kiss_icp_pipeline(
     from kiss_icp.pybind import kiss_icp_pybind
 
     rr.init("kiss-icp")
-    rr.spawn(memory_limit="8GB")
-    rr.connect()
+    rr.spawn(memory_limit=memory_limit)
     kiss_icp_pybind._init_rr_rec("kiss-icp", rr.get_recording_id())
 
     OdometryPipeline(

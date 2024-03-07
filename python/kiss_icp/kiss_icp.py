@@ -21,6 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import numpy as np
+import rerun as rr
 
 from kiss_icp.config import KISSConfig
 from kiss_icp.deskew import get_motion_compensator
@@ -44,12 +45,15 @@ class KissICP:
     def register_frame(self, frame, timestamps):
         # Apply motion compensation
         frame = self.compensator.deskew_scan(frame, self.poses, timestamps)
-
+        
         # Preprocess the input cloud
         frame = self.preprocess(frame)
-
+        
         # Voxelize
         source, frame_downsample = self.voxelize(frame)
+        rr.log("world/pose_vehicle/processed_frame", rr.Points3D(frame, colors=[60, 120, 180]))
+        rr.log("world/pose_vehicle/downsampled_frame", rr.Points3D(frame_downsample, radii=0.1))
+        rr.log("world/pose_vehicle/keypoints", rr.Points3D(source, colors=[180, 0, 180], radii=0.05))
 
         # Get motion prediction and adaptive_threshold
         sigma = self.get_adaptive_threshold()

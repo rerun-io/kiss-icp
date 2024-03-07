@@ -30,24 +30,28 @@
 
 ## Install
 
+Enter a nix-shell with the required system dependencies:
 ```sh
-pip install kiss-icp
+nix-shell
 ```
 
-Next, follow the instructions on how to run the system by typing:
-
+Create python virtual environment and install kiss-icp:
 ```sh
-kiss_icp_pipeline --help
+python -m venv venv
+. venv/bin/activate
+pip install -r requirements.txt
+make editable # Builds and installs kiss-icp
 ```
 
-<details>
-<summary>This should print the following help message:</summary>
+Download the NCLT dataset and puts into a directory called `data/`:
+```sh
+./download_nclt.py
+```
 
-![out](https://user-images.githubusercontent.com/21349875/193282970-25a400aa-ebcd-487a-b839-faa04eeca5b9.png)
-
-</details>
-
-For advanced instructions on the Python package please see [this README](python/README.md)
+Visualize the dataset:
+```sh
+kiss_icp_pipeline --dataloader nclt data/2013-01-10 --n-scans 500 --deskew --memory-limit 4GB
+```
 
 ## ROS support
 
