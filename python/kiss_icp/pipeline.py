@@ -101,16 +101,18 @@ class OdometryPipeline:
         for idx in get_progress_bar(self._first, self._last):
             raw_frame, timestamps = self._next(idx)
             start_time = time.perf_counter_ns()
-            
-            translation = self.poses[-1][:3, 3] if len(self.poses) >= 1 else np.array([0, 0, 0])
-            rotation = self.poses[-1][:3, :3] if len(self.poses) >= 1 else np.identity(3)
-            rr.log(
-                "world/pose_vehicle",
-                rr.Transform3D(
-                    translation=translation, mat3x3=rotation
-                ),
+
+            translation = (
+                self.poses[-1][:3, 3] if len(self.poses) >= 1 else np.array([0, 0, 0])
             )
-            rr.log("world/pose_vehicle/raw_frame", rr.Points3D(np.array(raw_frame)))
+            rotation = (
+                self.poses[-1][:3, :3] if len(self.poses) >= 1 else np.identity(3)
+            )
+            rr.log(
+                "world/preprocessing",
+                rr.Transform3D(translation=translation, mat3x3=rotation),
+            )
+            rr.log("world/preprocessing/raw_frame", rr.Points3D(np.array(raw_frame)))
             
             source, keypoints = self.odometry.register_frame(raw_frame, timestamps)
             self.times.append(time.perf_counter_ns() - start_time)
@@ -119,8 +121,10 @@ class OdometryPipeline:
                 rr.log(
                     "world/ground_truth",
                     rr.Points3D(
-                        self.gt_poses[: len(self.poses), :3, 3]
-                        - self.gt_poses[0, :3, 3]
+                        [
+                            (np.linalg.inv(self.gt_poses[0]) @ self.gt_poses[i])[:3, 3]
+                            for i in range(len(self.poses))
+                        ]
                     ),
                 )
 
@@ -132,7 +136,7 @@ class OdometryPipeline:
                 "world/est_positions",
                 rr.Points3D([self.poses[i][:3, 3] for i in range(len(self.poses))]),
             )
-            # rr.log("world/pose_vehicle/processed_frame", rr.Points3D(source))
+            # rr.log("world/preprocessing/processed_frame", rr.Points3D(source))
             rr.log(
                 "world/map",
                 rr.Points3D(

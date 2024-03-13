@@ -247,6 +247,26 @@ def kiss_icp_pipeline(
 
     rr.init("kiss-icp")
     rr.spawn(memory_limit=memory_limit)
+    rr.log("explanation", rr.TextDocument("""
+
+KISS-ICP is a LiDAR Odometry pipeline that just works on most of the cases without tuning any parameter.
+
+The pipeline consists of the following steps:
+* Predict motion from the previous pose estimates and use it to 
+[deskew the scan](recording://world/preprocessing/deskewed_frame) 
+* Perform subsampling at two different resolutions, the 
+[sample with the finest resolution](recording://world/preprocessing/fine_subsample) is used 
+to update the map and the [sample with the rougher resolution](recording://world/preprocessing/rough_subsample) 
+is used to estimate the odomotry during ICP and update the [constructed map](recording://world/map).
+* Compute the [adaptive threshold](recording://adaptive_threshold) which is used to remove potential outliers during the ICP step.
+* Utilize the Point-to-Point ICP method to estimate odometry. 
+This involves comparing each point in the subsampled scan 
+with the closest point in the constructed map and making incremental updates
+to the estimated odometry based on these matches. 
+
+A more detailed explanation can be found in the orginial paper, 2023 "KISS-ICP: In Defense of Point-to-Point ICP -- Simple, Accurate, and Robust Registration If Done the Right Way"
+
+""", media_type="text/markdown"))
     kiss_icp_pybind._init_rr_rec("kiss-icp", rr.get_recording_id())
 
     OdometryPipeline(

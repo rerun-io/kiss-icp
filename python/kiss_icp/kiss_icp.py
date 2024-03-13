@@ -51,9 +51,9 @@ class KissICP:
         
         # Voxelize
         source, frame_downsample = self.voxelize(frame)
-        rr.log("world/pose_vehicle/processed_frame", rr.Points3D(frame, colors=[60, 120, 180]))
-        rr.log("world/pose_vehicle/downsampled_frame", rr.Points3D(frame_downsample, radii=0.1))
-        rr.log("world/pose_vehicle/keypoints", rr.Points3D(source, colors=[180, 0, 180], radii=0.05))
+        rr.log("world/preprocessing/deskewed_frame", rr.Points3D(frame, colors=[60, 120, 180]))
+        rr.log("world/preprocessing/rough_subsample", rr.Points3D(frame_downsample, radii=0.1))
+        rr.log("world/preprocessing/fine_subsample", rr.Points3D(source, colors=[180, 0, 180], radii=0.05))
 
         # Get motion prediction and adaptive_threshold
         sigma = self.get_adaptive_threshold()

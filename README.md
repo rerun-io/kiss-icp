@@ -30,14 +30,28 @@
 
 ## Install
 
-Enter a nix-shell with the required system dependencies:
+### Install system dependencies
+
+On Ubuntu:
+```
+sudo apt update 
+sudo apt install ca-certificates lsb-release wget
+sudo wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+sudo apt install ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+sudo apt update
+sudo apt-get install libarrow-dev python3-pip python3-venv
+```
+
+Another option is to enther a nix-shell with the required system dependencies:
 ```sh
 nix-shell
 ```
 
+### Building kiss-icp
+
 Create python virtual environment and install kiss-icp:
 ```sh
-python -m venv venv
+python3 -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt
 make editable # Builds and installs kiss-icp
@@ -50,7 +64,7 @@ Download the NCLT dataset and puts into a directory called `data/`:
 
 Visualize the dataset:
 ```sh
-kiss_icp_pipeline --dataloader nclt data/2013-01-10 --n-scans 500 --deskew --memory-limit 4GB
+kiss_icp_pipeline --dataloader nclt data/2013-01-10 --n-scans 250 --jump 500 --deskew --memory-limit 4GB
 ```
 
 ## ROS support
