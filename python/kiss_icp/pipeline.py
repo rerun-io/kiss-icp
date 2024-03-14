@@ -112,7 +112,7 @@ class OdometryPipeline:
                 "world/preprocessing",
                 rr.Transform3D(translation=translation, mat3x3=rotation),
             )
-            rr.log("world/preprocessing/raw_frame", rr.Points3D(np.array(raw_frame)))
+            rr.log("world/preprocessing/raw_frame", rr.Points3D(np.array(raw_frame), colors=[[120, 250, 120]]))
             
             source, keypoints = self.odometry.register_frame(raw_frame, timestamps)
             self.times.append(time.perf_counter_ns() - start_time)
@@ -133,10 +133,9 @@ class OdometryPipeline:
             )
 
             rr.log(
-                "world/est_positions",
+                "world/estimated_positions",
                 rr.Points3D([self.poses[i][:3, 3] for i in range(len(self.poses))]),
             )
-            # rr.log("world/preprocessing/processed_frame", rr.Points3D(source))
             rr.log(
                 "world/map",
                 rr.Points3D(

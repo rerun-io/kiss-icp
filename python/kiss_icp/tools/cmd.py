@@ -252,7 +252,7 @@ def kiss_icp_pipeline(
 KISS-ICP is a LiDAR Odometry pipeline that just works on most of the cases without tuning any parameter.
 
 The pipeline consists of the following steps:
-* Predict motion from the previous pose estimates and use it to 
+* Predict motion from the [previous pose estimates](recording://world/estimated_positions) and use it to 
 [deskew the scan](recording://world/preprocessing/deskewed_frame) 
 * Perform subsampling at two different resolutions, the 
 [sample with the finest resolution](recording://world/preprocessing/fine_subsample) is used 
@@ -260,9 +260,9 @@ to update the map and the [sample with the rougher resolution](recording://world
 is used to estimate the odomotry during ICP and update the [constructed map](recording://world/map).
 * Compute the [adaptive threshold](recording://adaptive_threshold) which is used to remove potential outliers during the ICP step.
 * Utilize the Point-to-Point ICP method to estimate odometry. 
-This involves comparing each point in the subsampled scan 
+This involves comparing [each point](recording://world/icp/source) in the subsampled scan 
 with the closest point in the constructed map and making incremental updates
-to the estimated odometry based on these matches. 
+to the [estimated odometry](recording://world/icp/) based on these [correspondences](recording://world/icp/correspondences). 
 
 A more detailed explanation can be found in the orginial paper, 2023 "KISS-ICP: In Defense of Point-to-Point ICP -- Simple, Accurate, and Robust Registration If Done the Right Way"
 

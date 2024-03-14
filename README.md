@@ -19,11 +19,8 @@
   <br />
   <br />
 
-[KISS-ICP](https://www.ipb.uni-bonn.de/wp-content/papercite-data/pdf/vizzo2023ral.pdf) is a LiDAR Odometry pipeline that **just works** on most of the cases without tunning any parameter.
-
-  <p align="center">
-    <a href="https://user-images.githubusercontent.com/21349875/219626075-d67e9165-31a2-4a1b-8c26-9f04e7d195ec.mp4"><img alt="KISS-ICP Demo" src="https://user-images.githubusercontent.com/21349875/211829074-474bec08-0129-4e34-85e7-62265e44a7de.png"></a>
-  </p>
+This is fork of the official [KISS-ICP repo](https://github.com/PRBonn/kiss-icp) that uses [rerun](https://www.rerun.io/) for visualization.
+  
 </div>
 
 <hr />
@@ -64,7 +61,7 @@ Download the NCLT dataset and puts into a directory called `data/`:
 
 Visualize the dataset:
 ```sh
-kiss_icp_pipeline --dataloader nclt data/2013-01-10 --n-scans 250 --jump 500 --deskew --memory-limit 4GB
+kiss_icp_pipeline --dataloader nclt data/2013-01-10 --n-scans 150 --jump 600 --deskew --memory-limit 4GB
 ```
 
 ## ROS support

@@ -21,20 +21,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 #include "Registration.hpp"
-#include "Recording.hpp"
-#include <rerun.hpp>
 
 #include <tbb/blocked_range.h>
 #include <tbb/parallel_reduce.h>
 
-#include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <numeric>
+#include <rerun.hpp>
 #include <sophus/se3.hpp>
 #include <sophus/so3.hpp>
 #include <tuple>
 
+#include "Recording.hpp"
 #include "VoxelHashMap.hpp"
 
 namespace Eigen {
@@ -150,7 +150,6 @@ Sophus::SE3d Registration::AlignPointsToMap(const std::vector<Eigen::Vector3d> &
                                             const Sophus::SE3d &initial_guess,
                                             double max_correspondence_distance,
                                             double kernel) {
-
     if (voxel_map.Empty()) return initial_guess;
 
     // Equation (9)
@@ -159,11 +158,10 @@ Sophus::SE3d Registration::AlignPointsToMap(const std::vector<Eigen::Vector3d> &
 
     // ICP-loop
     Sophus::SE3d T_icp = Sophus::SE3d();
-    int j {0};
+    int j{0};
     for (; j < max_num_iterations_; ++j) {
         // Equation (10)
         const auto associations = FindAssociations(source, voxel_map, max_correspondence_distance);
-
 
         // Equation (11)
         const auto &[JTJ, JTr] = BuildLinearSystem(associations, kernel);
@@ -177,32 +175,35 @@ Sophus::SE3d Registration::AlignPointsToMap(const std::vector<Eigen::Vector3d> &
         if (dx.norm() < convergence_criterion_) break;
 
         if (rr_rec != nullptr) {
-
             std::vector<rerun::Position3D> rr_source;
             for (auto &point : source) {
                 Eigen::Vector3f float_pos = point.cast<float>();
                 rr_source.push_back(rerun::Position3D(rerun::Vec3D(float_pos.data())));
             }
-            rr_rec->log("world/icp/source", rerun::Points3D(rr_source).with_colors(rerun::Color(0, 180, 180)));
+            rr_rec->log("world/icp/source", rerun::Points3D(rr_source)
+                                                .with_colors(rerun::Color(0, 180, 180))
+                                                .with_radii(0.15f));
+
+            // Convert correspondences to rerun::LineStrips3D
             std::vector<rerun::LineStrip3D> strips;
             for (size_t i = 0; i < associations.size(); ++i) {
                 auto [src_point, target_point] = associations[i];
                 Eigen::Vector3f float_src_point = src_point.cast<float>();
                 Eigen::Vector3f float_target_point = target_point.cast<float>();
-                std::vector<rerun::Position3D> lines {};
+                std::vector<rerun::Position3D> lines{};
                 lines.push_back(rerun::Position3D(rerun::Vec3D(float_src_point.data())));
                 lines.push_back(rerun::Position3D(rerun::Vec3D(float_target_point.data())));
-                strips.push_back(
-                    rerun::LineStrip3D(lines)
-                );
+                strips.push_back(rerun::LineStrip3D(lines));
             }
-            auto cur_transform = T_icp*initial_guess;
+            rr_rec->log(
+                "world/icp/correspondences",
+                rerun::LineStrips3D(strips).with_colors(rerun::Color(0, 255, 0)).with_radii(0.15f));
+
+            auto cur_transform = T_icp * initial_guess;
             Sophus::Vector3f float_trans = cur_transform.translation().cast<float>();
             Sophus::Matrix3f float_rot = cur_transform.rotationMatrix().cast<float>();
-            auto rr_trans = rerun::Vec3D(float_trans.data());
-            auto rr_rot = rerun::Mat3x3(float_rot.data());
-            rr_rec->log("world/icp/pose", rerun::Transform3D(rerun::Vec3D(rr_trans), rerun::Mat3x3(rr_rot)));
-            rr_rec->log("world/icp/corcorrespondence", rerun::LineStrips3D(strips).with_colors(rerun::Color(0, 255, 0)));
+            rr_rec->log("world/icp/pose", rerun::Transform3D(rerun::Vec3D(float_trans.data()),
+                                                             rerun::Mat3x3(float_rot.data())));
         }
     }
     // Spit the final transformation
