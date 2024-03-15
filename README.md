@@ -21,15 +21,7 @@
 
 This is fork of the official [KISS-ICP repo](https://github.com/PRBonn/kiss-icp) that uses [rerun](https://www.rerun.io/) for visualization.
 
-<picture>
-  <img src="https://static.rerun.io/kiss-icp-screenshot/881ec7c7c0a0e50ec5d78d82875efaf3bb3c6e01/full.png" alt="">
-  <source media="(max-width: 480px)" srcset="https://static.rerun.io/kiss-icp-screenshot/881ec7c7c0a0e50ec5d78d82875efaf3bb3c6e01/480w.png">
-  <source media="(max-width: 768px)" srcset="https://static.rerun.io/kiss-icp-screenshot/881ec7c7c0a0e50ec5d78d82875efaf3bb3c6e01/768w.png">
-  <source media="(max-width: 1024px)" srcset="https://static.rerun.io/kiss-icp-screenshot/881ec7c7c0a0e50ec5d78d82875efaf3bb3c6e01/1024w.png">
-  <source media="(max-width: 1200px)" srcset="https://static.rerun.io/kiss-icp-screenshot/881ec7c7c0a0e50ec5d78d82875efaf3bb3c6e01/1200w.png">
-</picture>
-
-https://vimeo.com/923395317?autoplay=1&loop=1&autopause=0&background=1&muted=1&ratio=1920:1080
+https://github.com/rerun-io/kiss-icp/assets/28707703/61a60eda-6726-4f8e-a9f8-f600945b037c
 
 </div>
 
