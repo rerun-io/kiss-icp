@@ -9,11 +9,10 @@ in
       nix-ld
     ];
     buildInputs = with pkgs; [
-      arrow-cpp
-      pkg-config
       libxkbcommon
       libGL
-      gcc-unwrapped
+      gcc-unwrapped.lib
+      pkg-config
       vulkan-loader
       xorg.libX11
       xorg.libXcursor

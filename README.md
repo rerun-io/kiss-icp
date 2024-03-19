@@ -29,23 +29,6 @@ https://github.com/rerun-io/kiss-icp/assets/28707703/61a60eda-6726-4f8e-a9f8-f60
 
 ## Install
 
-### Install system dependencies
-
-On Ubuntu:
-```
-sudo apt update 
-sudo apt install ca-certificates lsb-release wget
-sudo wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
-sudo apt install ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
-sudo apt update
-sudo apt-get install libarrow-dev python3-pip python3-venv
-```
-
-Another option is to enther a nix-shell with the required system dependencies:
-```sh
-nix-shell
-```
-
 ### Building kiss-icp
 
 Create python virtual environment and install kiss-icp:
@@ -53,6 +36,7 @@ Create python virtual environment and install kiss-icp:
 python3 -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt
+pip install --pre -f https://build.rerun.io/commit/c8ab078/wheels --upgrade rerun-sdk # To use the prerelease version of rerun.
 make editable # Builds and installs kiss-icp
 ```
 
