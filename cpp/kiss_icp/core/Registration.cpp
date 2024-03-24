@@ -35,6 +35,7 @@
 #include <sophus/se3.hpp>
 #include <sophus/so3.hpp>
 #include <tuple>
+#include <optional>
 
 #include "Recording.hpp"
 #include "VoxelHashMap.hpp"
@@ -46,6 +47,37 @@ using Vector6d = Eigen::Matrix<double, 6, 1>;
 }  // namespace Eigen
 using Associations = std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>>;
 using LinearSystem = std::pair<Eigen::Matrix6d, Eigen::Vector6d>;
+
+template <>
+struct rerun::CollectionAdapter<rerun::LineStrip3D, Associations> {
+    Collection<rerun::LineStrip3D> operator()(const Associations& container) {
+        std::vector<rerun::LineStrip3D> strips(container.size());
+        for (auto &pair : container) {
+            const auto &[src_point, target_point] = pair;
+            std::vector<rerun::Position3D> lines{};
+            Eigen::Vector3f float_src_point = src_point.cast<float>();
+            Eigen::Vector3f float_target_point = target_point.cast<float>();
+            lines.push_back(rerun::Vec3D(float_src_point.data()));
+            lines.push_back(rerun::Vec3D(float_target_point.data()));
+            strips.push_back(rerun::LineStrip3D(lines));
+        }
+        return Collection<rerun::LineStrip3D>::take_ownership(std::move(strips));
+    }
+
+    Collection<rerun::LineStrip3D> operator()(const Associations&& container) {
+        std::vector<rerun::LineStrip3D> strips(container.size());
+        for (auto &pair : container) {
+            const auto &[src_point, target_point] = pair;
+            std::vector<rerun::Position3D> lines{};
+            Eigen::Vector3f float_src_point = src_point.cast<float>();
+            Eigen::Vector3f float_target_point = target_point.cast<float>();
+            lines.push_back(rerun::Vec3D(float_src_point.data()));
+            lines.push_back(rerun::Vec3D(float_target_point.data()));
+            strips.push_back(rerun::LineStrip3D(lines));
+        }
+        return Collection<rerun::LineStrip3D>::take_ownership(std::move(strips));
+    }
+};
 
 namespace {
 inline double square(double x) { return x * x; }
@@ -68,7 +100,7 @@ std::vector<Voxel> GetAdjacentVoxels(const Voxel &voxel, int adjacent_voxels = 1
     return voxel_neighborhood;
 }
 
-Eigen::Vector3d GetClosestNeighbor(const Eigen::Vector3d &point,
+std::optional<Eigen::Vector3d> GetClosestNeighbor(const Eigen::Vector3d &point,
                                    const kiss_icp::VoxelHashMap &voxel_map) {
     // Convert the point to voxel coordinates
     const auto &voxel = voxel_map.PointToVoxel(point);
@@ -78,12 +110,12 @@ Eigen::Vector3d GetClosestNeighbor(const Eigen::Vector3d &point,
     const auto &neighbors = voxel_map.GetPoints(query_voxels);
 
     // Find the nearest neighbor
-    Eigen::Vector3d closest_neighbor;
+    std::optional<Eigen::Vector3d> closest_neighbor;
     double closest_distance2 = std::numeric_limits<double>::max();
     std::for_each(neighbors.cbegin(), neighbors.cend(), [&](const auto &neighbor) {
         double distance = (neighbor - point).squaredNorm();
-        if (distance < closest_distance2) {
-            closest_neighbor = neighbor;
+        if (distance < closest_distance2 || closest_neighbor == std::nullopt) {
+            closest_neighbor = std::make_optional(neighbor);
             closest_distance2 = distance;
         }
     });
@@ -105,9 +137,9 @@ Associations FindAssociations(const std::vector<Eigen::Vector3d> &points,
         [&](const tbb::blocked_range<points_iterator> &r, Associations res) -> Associations {
             res.reserve(r.size());
             for (const auto &point : r) {
-                Eigen::Vector3d closest_neighbor = GetClosestNeighbor(point, voxel_map);
-                if ((closest_neighbor - point).norm() < max_correspondance_distance) {
-                    res.emplace_back(point, closest_neighbor);
+                std::optional<Eigen::Vector3d> closest_neighbor = GetClosestNeighbor(point, voxel_map);
+                if (closest_neighbor != std::nullopt && (closest_neighbor.value() - point).norm() < max_correspondance_distance) {
+                    res.emplace_back(point, closest_neighbor.value());
                 }
             }
             return res;
@@ -188,12 +220,52 @@ Sophus::SE3d Registration::AlignPointsToMap(const std::vector<Eigen::Vector3d> &
     std::vector<Eigen::Vector3d> source = frame;
     TransformPoints(initial_guess, source);
 
+    // max_correspondence_distance = 1000.0;
+
+
     // ICP-loop
     Sophus::SE3d T_icp = Sophus::SE3d();
     int j{0};
     for (; j < max_num_iterations_; ++j) {
         // Equation (10)
         const auto associations = FindAssociations(source, voxel_map, max_correspondence_distance);
+
+        if (rr_rec != nullptr) {
+            rr_rec->set_time_sequence("step", algo_step);
+            if (j == 0) {
+                algo_step += 7;
+            }
+            algo_step += 1;
+            rr_rec->log("world/icp/source", rerun::Points3D(source)
+                                                .with_colors(rerun::Color(0, 180, 180))
+                                                .with_radii(0.25f));
+
+            rr_rec->log(
+                "world/icp/correspondences",
+                rerun::LineStrips3D(associations).with_colors(rerun::Color(0, 255, 0)).with_radii(0.15f));
+
+            auto cur_transform = T_icp * initial_guess;
+            Sophus::Vector3f float_trans = cur_transform.translation().cast<float>();
+            Sophus::Matrix3f float_rot = cur_transform.rotationMatrix().cast<float>();
+            rr_rec->log("world/icp/pose", rerun::Transform3D(rerun::Vec3D(float_trans.data()),
+                                                             rerun::Mat3x3(float_rot.data())));
+
+            for (size_t i = 0; i < associations.size(); ++i) {
+                auto [src_point, target_point] = associations[i];
+                if ((src_point - target_point).norm() >= 10.0f) {
+                    const auto &voxel = voxel_map.PointToVoxel(src_point);
+                    const auto &query_voxels = GetAdjacentVoxels(voxel);
+                    const auto &neighbors = voxel_map.GetPoints(query_voxels);
+                    rr_rec->set_time_sequence("step", algo_step);
+                    algo_step += 1;
+                    rr_rec->log("world/icp_debug/log", rerun::TextLog("nb voxels " + std::to_string(query_voxels.size()) ));
+                    rr_rec->log("world/icp_debug/log", rerun::TextLog("nb neighbors " + std::to_string(neighbors.size()) ));
+
+                    std::vector<Eigen::Vector3d> a = {src_point, target_point};
+                    rr_rec->log("world/icp_debug/pair", rerun::Points3D(a).with_colors(rerun::Color(255, 0, 255)));
+                }
+            }
+        }
 
         // Equation (11)
         const auto &[JTJ, JTr] = BuildLinearSystem(associations, kernel);
@@ -205,38 +277,6 @@ Sophus::SE3d Registration::AlignPointsToMap(const std::vector<Eigen::Vector3d> &
         T_icp = estimation * T_icp;
         // Termination criteria
         if (dx.norm() < convergence_criterion_) break;
-
-        if (rr_rec != nullptr) {
-            std::vector<rerun::Position3D> rr_source;
-            for (auto &point : source) {
-                Eigen::Vector3f float_pos = point.cast<float>();
-                rr_source.push_back(rerun::Position3D(rerun::Vec3D(float_pos.data())));
-            }
-            rr_rec->log("world/icp/source", rerun::Points3D(rr_source)
-                                                .with_colors(rerun::Color(0, 180, 180))
-                                                .with_radii(0.15f));
-
-            // Convert correspondences to rerun::LineStrips3D
-            std::vector<rerun::LineStrip3D> strips;
-            for (size_t i = 0; i < associations.size(); ++i) {
-                auto [src_point, target_point] = associations[i];
-                Eigen::Vector3f float_src_point = src_point.cast<float>();
-                Eigen::Vector3f float_target_point = target_point.cast<float>();
-                std::vector<rerun::Position3D> lines{};
-                lines.push_back(rerun::Position3D(rerun::Vec3D(float_src_point.data())));
-                lines.push_back(rerun::Position3D(rerun::Vec3D(float_target_point.data())));
-                strips.push_back(rerun::LineStrip3D(lines));
-            }
-            rr_rec->log(
-                "world/icp/correspondences",
-                rerun::LineStrips3D(strips).with_colors(rerun::Color(0, 255, 0)).with_radii(0.15f));
-
-            auto cur_transform = T_icp * initial_guess;
-            Sophus::Vector3f float_trans = cur_transform.translation().cast<float>();
-            Sophus::Matrix3f float_rot = cur_transform.rotationMatrix().cast<float>();
-            rr_rec->log("world/icp/pose", rerun::Transform3D(rerun::Vec3D(float_trans.data()),
-                                                             rerun::Mat3x3(float_rot.data())));
-        }
     }
     // Spit the final transformation
     return T_icp * initial_guess;

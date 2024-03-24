@@ -129,6 +129,8 @@ PYBIND11_MODULE(kiss_icp_pybind, m) {
 
     // Rerun recording.
     m.def("_init_rr_rec", &init_rr_rec, "app_id"_a, "recording_id"_a);
+    m.def("_set_algo_step", &set_algo_step, "n"_a);
+    m.def("_get_algo_step", &get_algo_step);
 }
 
 }  // namespace kiss_icp

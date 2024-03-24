@@ -49,6 +49,7 @@ class OdometryPipeline:
         visualize: bool = False,
         n_scans: int = -1,
         jump: int = 0,
+        step: int = 1,
     ):
         self._dataset = dataset
         self._n_scans = (
@@ -70,6 +71,7 @@ class OdometryPipeline:
         self.times = []
         self.poses = self.odometry.poses
         self.has_gt = hasattr(self._dataset, "gt_poses")
+        self.step = step
         self.gt_poses = (
             self._dataset.gt_poses[self._first : self._last] if self.has_gt else None
         )
@@ -88,20 +90,28 @@ class OdometryPipeline:
     # Public interface  ------
     def run(self):
         self._run_pipeline()
-        self._run_evaluation()
-        self._create_output_dir()
-        self._write_result_poses()
-        self._write_gt_poses()
-        self._write_cfg()
-        self._write_log()
+        # self._run_evaluation()
+        # self._create_output_dir()
+        # self._write_result_poses()
+        # self._write_gt_poses()
+        # self._write_cfg()
+        # self._write_log()
         return self.results
 
     # Private interface  ------
     def _run_pipeline(self):
-        for idx in get_progress_bar(self._first, self._last):
+        
+        from kiss_icp.pybind import kiss_icp_pybind
+
+        for idx in get_progress_bar(self._first, self._last, step=self.step):
             raw_frame, timestamps = self._next(idx)
             start_time = time.perf_counter_ns()
 
+            step  = kiss_icp_pybind._get_algo_step()
+            rr.set_time_sequence("step", step)
+            step += 1
+            kiss_icp_pybind._set_algo_step(step)
+            
             translation = (
                 self.poses[-1][:3, 3] if len(self.poses) >= 1 else np.array([0, 0, 0])
             )
@@ -113,7 +123,7 @@ class OdometryPipeline:
                 rr.Transform3D(translation=translation, mat3x3=rotation),
             )
             rr.log("world/preprocessing/raw_frame", rr.Points3D(np.array(raw_frame), colors=[[120, 250, 120]]))
-            
+
             source, keypoints = self.odometry.register_frame(raw_frame, timestamps)
             self.times.append(time.perf_counter_ns() - start_time)
 
@@ -140,10 +150,11 @@ class OdometryPipeline:
                 "world/map",
                 rr.Points3D(
                     self.odometry.local_map.point_cloud(),
-                    radii=0.02,
-                    colors=[255, 0, 0],
+                    radii=0.05,
+                    colors=[255, 165, 0],
                 ),
             )
+
 
     def _next(self, idx):
         """TODO: re-arrange this logic"""

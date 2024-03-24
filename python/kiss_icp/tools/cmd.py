@@ -219,13 +219,12 @@ def kiss_icp_pipeline(
         "--memory-limit",
         show_default=True,
         help="[Optional] Specify the memory limit for the rerun viewer."
+    ),
+    step: int = typer.Option(
+        1,
+        "--step",
+        help="Take every nth scan, so with --step=3 it would just look at scan 0, 3, 6 ... (Used to make ICP visually appealing)",
     )
-    # vis_preprocess: Optional[bool] = typer.Option(
-    #     True,
-    #     "--vis-preprocess",
-    #     show_default=True,
-    #     # help="[Optional] Specify "
-    # )
 ):
     # Attempt to guess some common file extensions to avoid using the --dataloader flag
     if not dataloader:
@@ -266,7 +265,7 @@ to the [estimated odometry](recording://world/icp/) based on these [corresponden
 
 A more detailed explanation can be found in the orginial paper, 2023 "KISS-ICP: In Defense of Point-to-Point ICP -- Simple, Accurate, and Robust Registration If Done the Right Way"
 
-""", media_type="text/markdown"))
+""", media_type="text/markdown"), timeless=True)
     kiss_icp_pybind._init_rr_rec("kiss-icp", rr.get_recording_id())
 
     OdometryPipeline(
@@ -284,6 +283,7 @@ A more detailed explanation can be found in the orginial paper, 2023 "KISS-ICP: 
         visualize=False,
         n_scans=n_scans,
         jump=jump,
+        step=step,
     ).run().print()
 
 
