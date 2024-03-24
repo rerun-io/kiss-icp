@@ -83,19 +83,10 @@ class OdometryPipeline:
         )
 
         # Visualizer
-        self.visualizer = RegistrationVisualizer() if visualize else StubVisualizer()
-        if hasattr(self._dataset, "use_global_visualizer"):
-            self.visualizer.global_view = self._dataset.use_global_visualizer
 
     # Public interface  ------
     def run(self):
         self._run_pipeline()
-        # self._run_evaluation()
-        # self._create_output_dir()
-        # self._write_result_poses()
-        # self._write_gt_poses()
-        # self._write_cfg()
-        # self._write_log()
         return self.results
 
     # Private interface  ------

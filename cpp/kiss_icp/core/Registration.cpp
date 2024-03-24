@@ -249,22 +249,6 @@ Sophus::SE3d Registration::AlignPointsToMap(const std::vector<Eigen::Vector3d> &
             Sophus::Matrix3f float_rot = cur_transform.rotationMatrix().cast<float>();
             rr_rec->log("world/icp/pose", rerun::Transform3D(rerun::Vec3D(float_trans.data()),
                                                              rerun::Mat3x3(float_rot.data())));
-
-            for (size_t i = 0; i < associations.size(); ++i) {
-                auto [src_point, target_point] = associations[i];
-                if ((src_point - target_point).norm() >= 10.0f) {
-                    const auto &voxel = voxel_map.PointToVoxel(src_point);
-                    const auto &query_voxels = GetAdjacentVoxels(voxel);
-                    const auto &neighbors = voxel_map.GetPoints(query_voxels);
-                    rr_rec->set_time_sequence("step", algo_step);
-                    algo_step += 1;
-                    rr_rec->log("world/icp_debug/log", rerun::TextLog("nb voxels " + std::to_string(query_voxels.size()) ));
-                    rr_rec->log("world/icp_debug/log", rerun::TextLog("nb neighbors " + std::to_string(neighbors.size()) ));
-
-                    std::vector<Eigen::Vector3d> a = {src_point, target_point};
-                    rr_rec->log("world/icp_debug/pair", rerun::Points3D(a).with_colors(rerun::Color(255, 0, 255)));
-                }
-            }
         }
 
         // Equation (11)
