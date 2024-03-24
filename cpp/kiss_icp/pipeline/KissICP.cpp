@@ -41,7 +41,7 @@ KissICP::Vector3dVectorTuple KissICP::RegisterFrame(const std::vector<Eigen::Vec
                                                     const std::vector<double> &timestamps) {
     
     const auto &deskew_frame = [&]() -> std::vector<Eigen::Vector3d> {
-        if (!config_.deskew) return frame;
+        if (!config_.deskew || timestamps.empty()) return frame;
         // TODO(Nacho) Add some asserts here to sanitize the timestamps
 
         //  If not enough poses for the estimation, do not de-skew
