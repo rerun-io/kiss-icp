@@ -215,7 +215,7 @@ def kiss_icp_pipeline(
         is_eager=True,
     ),
     memory_limit: Optional[str] = typer.Option(
-        "4GB",
+        None,
         "--memory-limit",
         show_default=True,
         help="[Optional] Specify the memory limit for the rerun viewer."
