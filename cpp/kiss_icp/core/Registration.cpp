@@ -100,8 +100,8 @@ std::vector<Voxel> GetAdjacentVoxels(const Voxel &voxel, int adjacent_voxels = 1
     return voxel_neighborhood;
 }
 
-std::optional<Eigen::Vector3d> GetClosestNeighbor(const Eigen::Vector3d &point,
-                                   const kiss_icp::VoxelHashMap &voxel_map) {
+std::tuple<Eigen::Vector3d, double> GetClosestNeighbor(const Eigen::Vector3d &point,
+                                                       const kiss_icp::VoxelHashMap &voxel_map) {
     // Convert the point to voxel coordinates
     const auto &voxel = voxel_map.PointToVoxel(point);
     // Get nearby voxels on the map
@@ -110,16 +110,16 @@ std::optional<Eigen::Vector3d> GetClosestNeighbor(const Eigen::Vector3d &point,
     const auto &neighbors = voxel_map.GetPoints(query_voxels);
 
     // Find the nearest neighbor
-    std::optional<Eigen::Vector3d> closest_neighbor;
-    double closest_distance2 = std::numeric_limits<double>::max();
+    Eigen::Vector3d closest_neighbor;
+    double closest_distance = std::numeric_limits<double>::max();
     std::for_each(neighbors.cbegin(), neighbors.cend(), [&](const auto &neighbor) {
-        double distance = (neighbor - point).squaredNorm();
-        if (distance < closest_distance2 || closest_neighbor == std::nullopt) {
-            closest_neighbor = std::make_optional(neighbor);
-            closest_distance2 = distance;
+        double distance = (neighbor - point).norm();
+        if (distance < closest_distance) {
+            closest_neighbor = neighbor;
+            closest_distance = distance;
         }
     });
-    return closest_neighbor;
+    return std::make_tuple(closest_neighbor, closest_distance);
 }
 
 Associations FindAssociations(const std::vector<Eigen::Vector3d> &points,
@@ -136,12 +136,12 @@ Associations FindAssociations(const std::vector<Eigen::Vector3d> &points,
         // 1st lambda: Parallel computation
         [&](const tbb::blocked_range<points_iterator> &r, Associations res) -> Associations {
             res.reserve(r.size());
-            for (const auto &point : r) {
-                std::optional<Eigen::Vector3d> closest_neighbor = GetClosestNeighbor(point, voxel_map);
-                if (closest_neighbor != std::nullopt && (closest_neighbor.value() - point).norm() < max_correspondance_distance) {
-                    res.emplace_back(point, closest_neighbor.value());
+            std::for_each(r.begin(), r.end(), [&](const auto &point) {
+                const auto &[closest_neighbor, distance] = GetClosestNeighbor(point, voxel_map);
+                if (distance < max_correspondance_distance) {
+                    res.emplace_back(point, closest_neighbor);
                 }
-            }
+            });
             return res;
         },
         // 2nd lambda: Parallel reduction
@@ -154,6 +154,7 @@ Associations FindAssociations(const std::vector<Eigen::Vector3d> &points,
 
     return associations;
 }
+
 
 LinearSystem BuildLinearSystem(const Associations &associations, double kernel) {
     auto compute_jacobian_and_residual = [](auto association) {
