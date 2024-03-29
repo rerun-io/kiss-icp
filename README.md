@@ -21,7 +21,7 @@
 
 This is fork of the official [KISS-ICP repo](https://github.com/PRBonn/kiss-icp) that uses [rerun](https://www.rerun.io/) for visualization.
 
-https://github.com/rerun-io/kiss-icp/assets/28707703/61a60eda-6726-4f8e-a9f8-f600945b037c
+https://github.com/rerun-io/kiss-icp/assets/28707703/1db490cc-8d71-483c-94eb-20b9e7ffbafa
 
 </div>
 
