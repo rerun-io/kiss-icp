@@ -36,7 +36,6 @@ Create python virtual environment and install kiss-icp:
 python3 -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt
-pip install --pre -f https://build.rerun.io/commit/03db295/wheels --upgrade rerun-sdk # To use the prerelease version of rerun.
 make editable # Builds and installs kiss-icp
 ```
 
